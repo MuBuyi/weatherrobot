@@ -2,9 +2,9 @@ wecom_webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=9ddf75b5-06
 weather_api_key: "4ad0328539dc404aabedda6732c633a4"
 openai_api_key: "sk-your-openai-api-key-here"
 use_ai_reminder: true
-doubao_url: "https://ark.cn-beijing.volces.com/api/v3/responses" # 替换为 豆包 实际 URL
-doubao_api_key: "d6b64d73-7ac4-4335-a45b-752fc70fc9e3"        # 替换为 豆包 实际 API Key
-doubao_model: "doubao-seed-1-8-251228"  # 豆包模型
+doubao_url: "https://ark.cn-beijing.volces.com/api/v3/responses" # 豆包 API 端点
+doubao_api_key: "d6b64d73-7ac4-4335-a45b-752fc70fc9e3"            # 豆包 API 密钥
+doubao_model: "doubao-seed-1-8-251228"                             # 豆包模型（支持回答问题和生成提醒）
 locations:
   - "101200805" # 监利
   # - "101020100" # 上海

@@ -231,3 +231,128 @@ func callOpenAI(apiKey, prompt string) (string, error) {
 
 	return openaiResp.Choices[0].Message.Content, nil
 }
+
+// AskDoubao 使用豆包 AI 回答用户问题
+func AskDoubao(question, url, apiKey, model string) (string, error) {
+	if url == "" || apiKey == "" {
+		return "", fmt.Errorf("豆包配置不完整")
+	}
+
+	requestBody := DoubaoRequest{
+		Model: model,
+		Input: []DoubaoInputMessage{
+			{
+				Role: "user",
+				Content: []DoubaoContentItem{
+					{
+						Type: "input_text",
+						Text: question,
+					},
+				},
+			},
+		},
+	}
+
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return "", fmt.Errorf("序列化请求失败: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return "", fmt.Errorf("创建请求失败: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("调用 Doubao API 失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("读取响应失败: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("Doubao API 返回错误状态码: %d, 响应: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var doubaoResp DoubaoResponse
+	if err := json.Unmarshal(bodyBytes, &doubaoResp); err != nil {
+		return "", fmt.Errorf("解析响应失败: %w", err)
+	}
+
+	// 提取 output 中的内容
+	if len(doubaoResp.Output) > 0 {
+		for _, item := range doubaoResp.Output {
+			if item.Type == "message" && len(item.Content) > 0 {
+				for _, content := range item.Content {
+					if content.Type == "output_text" && content.Text != "" {
+						return content.Text, nil
+					}
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("豆包 API 返回空响应或无法解析内容")
+}
+
+// AskOpenAI 使用 OpenAI 回答用户问题
+func AskOpenAI(question, apiKey string) (string, error) {
+	if apiKey == "" {
+		return "", fmt.Errorf("OpenAI API Key 未配置")
+	}
+
+	requestBody := OpenAIRequest{
+		Model: "gpt-3.5-turbo",
+		Messages: []Message{
+			{
+				Role:    "user",
+				Content: question,
+			},
+		},
+		MaxTokens: 500,
+	}
+
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return "", fmt.Errorf("序列化请求失败: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return "", fmt.Errorf("创建请求失败: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("调用 OpenAI API 失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("OpenAI API 返回错误状态码: %d, 响应: %s", resp.StatusCode, string(body))
+	}
+
+	var openaiResp OpenAIResponse
+	if err := json.NewDecoder(resp.Body).Decode(&openaiResp); err != nil {
+		return "", fmt.Errorf("解析响应失败: %w", err)
+	}
+
+	if len(openaiResp.Choices) == 0 {
+		return "", fmt.Errorf("OpenAI 返回空响应")
+	}
+
+	return openaiResp.Choices[0].Message.Content, nil
+}

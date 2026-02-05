@@ -5,6 +5,7 @@ import (
 	"wechatrobot/internal/config"
 	"wechatrobot/internal/cronn"
 	"wechatrobot/internal/log"
+	"wechatrobot/internal/wecom"
 
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
@@ -16,6 +17,9 @@ func main() {
 
 	// 加载配置
 	config.Load()
+
+	// 启动企业微信消息接收服务（在后台运行）
+	go wecom.StartWecomServer("9001")
 
 	// 创建cron实例（中国时区）
 	// c := cron.New(cron.WithLocation(time.FixedZone("CST", 8*3600)))
@@ -38,7 +42,7 @@ func main() {
 
 	// 启动定时任务
 	c.Start()
-	logrus.Info("天气机器人已启动")
+	logrus.Info("天气机器人已启动（包含定时任务和微信交互服务）")
 
 	// 保持程序运行
 	select {}
