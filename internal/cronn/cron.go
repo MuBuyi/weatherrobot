@@ -1,13 +1,11 @@
 package cronn
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"math/rand"
-	"net/http"
 	"time"
 	"wechatrobot/internal/config"
+	"wechatrobot/internal/ai"
 	"wechatrobot/internal/log"
 	"wechatrobot/internal/weather"
 
@@ -82,57 +80,43 @@ func SendDailyReport() {
 		return
 	}
 
-	log.Info("每日天气报告发送成功")
+	logrus.Info("每日天气报告发送成功")
 }
 
 // 发送下班提醒
 func SendOffWorkReminder() {
-	if len(config.Cfg.OffWorkMessages) == 0 {
-		logrus.Error("下班结束语配置为空")
-		return
+	var content string
+
+	// 如果启用了 AI 模式，使用 AI 生成提醒
+	if config.Cfg.UseAIReminder {
+		generatedMessage, err := ai.GenerateOffWorkReminder(config.Cfg.DoubaoURL, config.Cfg.DoubaoAPIKey, config.Cfg.DoubaoModel, config.Cfg.OpenAIAPIKey)
+		if err != nil {
+			logrus.Error("使用 AI 生成提醒失败: ", err)
+			// 降级到静态文案
+			if len(config.Cfg.OffWorkMessages) > 0 {
+				content = fmt.Sprintf("提醒：%s", config.Cfg.OffWorkMessages[0])
+			} else {
+				logrus.Error("生成提醒失败，且没有备用文案")
+				return
+			}
+		} else {
+			content = fmt.Sprintf("提醒：%s", generatedMessage)
+		}
+	} else {
+		// 使用静态文案模式
+		if len(config.Cfg.OffWorkMessages) == 0 {
+			logrus.Error("下班结束语配置为空且未启用 AI 模式")
+			return
+		}
+		rand.Seed(time.Now().Unix())
+		message := config.Cfg.OffWorkMessages[rand.Intn(len(config.Cfg.OffWorkMessages))]
+		content = fmt.Sprintf("提醒：%s", message)
 	}
 
-	rand.Seed(time.Now().Unix())
-	message := config.Cfg.OffWorkMessages[rand.Intn(len(config.Cfg.OffWorkMessages))]
-	content := fmt.Sprintf("提醒：%s", message)
-
-	if err := sendWecomMessage(content, config.Cfg.MentionUsers); err != nil {
+	if err := weather.SendWecomMessage(content, config.Cfg.MentionUsers); err != nil {
 		logrus.Error("发送下班提醒失败: ", err)
 		return
 	}
 
 	logrus.Info("下班提醒发送成功")
-}
-
-// 发送企业微信消息
-func sendWecomMessage(content string, mentionUsers []string) error {
-	message := struct {
-		MsgType string `json:"msgtype"`
-		Text    struct {
-			Content string   `json:"content"`
-			Mention []string `json:"mentioned_list"`
-		} `json:"text"`
-	}{
-		MsgType: "text",
-	}
-	message.Text.Content = content
-	message.Text.Mention = mentionUsers
-
-	messageBody, err := json.Marshal(message)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.Post(config.Cfg.WecomWebhook, "application/json", bytes.NewBuffer(messageBody))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("发送消息失败，状态码: %d", resp.StatusCode)
-	}
-
-	logrus.Info("消息发送成功")
-	return nil
 }

@@ -11,14 +11,19 @@ type Config struct {
 	WecomWebhook    string   `mapstructure:"wecom_webhook"`
 	WeatherAPIKey   string   `mapstructure:"weather_api_key"`
 	Locations       []string `mapstructure:"locations"`
+	OpenAIAPIKey    string   `mapstructure:"openai_api_key"`
+	UseAIReminder   bool     `mapstructure:"use_ai_reminder"`
+	DoubaoURL       string   `mapstructure:"doubao_url"`
+	DoubaoAPIKey    string   `mapstructure:"doubao_api_key"`
+	DoubaoModel     string   `mapstructure:"doubao_model"`
 	MentionUsers    []string `mapstructure:"mention_users"`
-	OffWorkMessages []string `mapstructure:"off_work_messages"` // 新增下班结束语配置项
+	OffWorkMessages []string `mapstructure:"off_work_messages"`
 }
 
 func Load() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath("/root/yangjian/wechatrobot/config") // 修改为配置文件所在的目录
+	viper.AddConfigPath("./config")
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
