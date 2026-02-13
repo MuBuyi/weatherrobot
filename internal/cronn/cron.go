@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"time"
 	"wechatrobot/internal/config"
+	"wechatrobot/internal/holiday"
 	"wechatrobot/internal/ai"
 	"wechatrobot/internal/log"
 	"wechatrobot/internal/weather"
@@ -13,6 +14,28 @@ import (
 )
 
 func SendDailyReport() {
+	logrus.Info("天气报告定时任务触发")
+	
+	// 检查是否应该发送提醒
+	shouldSend, isFestival, festival := holiday.ShouldSendReminder(config.Cfg.Holidays)
+	
+	if isFestival && festival != nil {
+		// 节假日：发送特色问候
+		festivalMessage := fmt.Sprintf("%s\n\n除夕至初六期间天气报告已暂停，假期结束后继续为您服务。", festival.Greeting)
+		if err := weather.SendWecomMessage(festivalMessage, config.Cfg.MentionUsers); err != nil {
+			log.Error("发送节假日问候失败: ", err)
+			weather.SendErrorAlert(err)
+			return
+		}
+		logrus.Info("节假日问候发送成功")
+		return
+	}
+	
+	if !shouldSend {
+		logrus.Info("当前为假期或非工作日，跳过天气报告")
+		return
+	}
+	
 	var fullReport string
 
 	// 遍历所有配置的城市
@@ -85,6 +108,14 @@ func SendDailyReport() {
 
 // 发送下班提醒
 func SendOffWorkReminder() {
+	// 检查是否应该发送下班提醒
+	shouldSend, _, _ := holiday.ShouldSendOffWorkReminder(config.Cfg.Holidays)
+	
+	if !shouldSend {
+		logrus.Info("当前为假期、节假日或非工作日，跳过下班提醒")
+		return
+	}
+	
 	var content string
 
 	// 如果启用了 AI 模式，使用 AI 生成提醒
