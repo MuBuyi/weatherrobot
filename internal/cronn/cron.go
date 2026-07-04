@@ -15,28 +15,14 @@ import (
 
 func SendDailyReport() {
 	logrus.Info("天气报告定时任务触发")
-	
-	// 检查是否应该发送提醒
-	shouldSend, isFestival, festival := holiday.ShouldSendReminder(config.Cfg.Holidays)
-	
-	if isFestival && festival != nil {
-		// 节假日：发送特色问候
-		festivalMessage := fmt.Sprintf("%s\n\n除夕至初六期间天气报告已暂停，假期结束后继续为您服务。", festival.Greeting)
-		if err := weather.SendWecomMessage(festivalMessage, config.Cfg.MentionUsers); err != nil {
-			log.Error("发送节假日问候失败: ", err)
-			weather.SendErrorAlert(err)
-			return
-		}
-		logrus.Info("节假日问候发送成功")
-		return
-	}
-	
-	if !shouldSend {
-		logrus.Info("当前为假期或非工作日，跳过天气报告")
-		return
-	}
-	
+
+	// 新逻辑：无论工作日、周末还是节假日，每天早上 8 点都发送天气预报
+	// 如果是法定节假日，在开头增加一段节日问候
 	var fullReport string
+	isFestival, festival := holiday.IsFestival(time.Now())
+	if isFestival && festival != nil {
+		fullReport += fmt.Sprintf("%s\n\n", festival.Greeting)
+	}
 
 	// 遍历所有配置的城市
 	for _, location := range config.Cfg.Locations {

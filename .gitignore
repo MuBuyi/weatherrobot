@@ -1,0 +1,12 @@
+# Local config and secrets
+.env
+*.env
+config/config.yaml
+
+# Logs and runtime files
+*.log
+
+# Build outputs
+/weatherrobot
+/weatherrobot_debug
+*.test
