@@ -1,0 +1,16 @@
+[Unit]
+Description=Weather Reminder Robot
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/condingyang/coding/robot/weatherrobot
+ExecStart=/home/condingyang/coding/robot/weatherrobot/weatherrobot
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

@@ -32,9 +32,9 @@ func TestIsWorkday(t *testing.T) {
 
 func TestIsFestival(t *testing.T) {
 	tests := []struct {
-		name        string
-		date        time.Time
-		shouldMatch bool
+		name         string
+		date         time.Time
+		shouldMatch  bool
 		festivalName string
 	}{
 		{"Spring Festival", time.Date(2025, 2, 1, 8, 0, 0, 0, time.UTC), true, "春节"},
@@ -65,15 +65,15 @@ func TestShouldSendReminder(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		date           time.Time
-		shouldSend     bool
-		isFestival     bool
+		name       string
+		date       time.Time
+		shouldSend bool
+		isFestival bool
 	}{
 		{
-			"Weekday non-holiday", 
-			time.Date(2025, 1, 6, 8, 0, 0, 0, time.UTC), 
-			true, 
+			"Weekday non-holiday",
+			time.Date(2025, 1, 6, 8, 0, 0, 0, time.UTC),
+			true,
 			false,
 		},
 		{

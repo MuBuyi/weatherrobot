@@ -1,48 +1,21 @@
-wecom_webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=9ddf75b5-063e-4141-951d-abfef1af4597"
-weather_api_key: "4ad0328539dc404aabedda6732c633a4"
-openai_api_key: "sk-your-openai-api-key-here"
-use_ai_reminder: true
-doubao_url: "https://ark.cn-beijing.volces.com/api/v3/responses" # 豆包 API 端点
-doubao_api_key: "d6b64d73-7ac4-4335-a45b-752fc70fc9e3"            # 豆包 API 密钥
-doubao_model: "doubao-seed-1-8-251228"                             # 豆包模型（支持回答问题和生成提醒）
-locations:
-  - "101200805" # 监利
-  # - "101020100" # 上海
-  # - "101010100" # 北京
-  # - "101280601" # 深圳
-  # - "101200101" # 武汉
+wecom_webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=fadb0952-1e05-42fa-a333-55d6ddb58b75"
+city_name: "武汉市"
+latitude: 30.5928
+longitude: 114.3055
+weather_cron: "0 8 * * *"
+lunch_cron: "30 11 * * *"
+off_work_cron: "0 18 * * *"
+timezone: "Asia/Shanghai"
+weather_base_url: "https://api.open-meteo.com"
+http_timeout_seconds: 10
+forecast_days: 3
+reminder_title: "🌦️ 武汉市今日天气提醒"
+reminder_intro: "早上好！新的一天开始了，请大家及时关注天气变化，合理安排出行与工作。"
+lunch_reminder_title: "🍱 午餐点餐提醒"
+lunch_reminder_text: "午餐时间快到啦！想好今天吃什么了吗？请大家及时完成点餐，祝大家吃得开心，下午元气满满！"
+off_work_reminder_title: "⏰ 下班打卡提醒"
+off_work_reminder_text: "下班时间到啦，请大家记得完成下班打卡，路上注意安全！"
+footer: "💡 温馨提示：记得关注天气变化哦！"
 mention_users:
-  - "@all" # 提及所有人
-# 自定义假期配置（优先级高于系统内置节假日）
-# 示例：如果需要额外假期，可以在这里配置
-holidays:
-  # - name: "年假"
-  #   start_date: "2025-03-01"
-  #   end_date: "2025-03-05"
-off_work_messages:
-  - "该下班了，祝大家晚上愉快！"
-  - "辛苦了一天，早点回家休息吧！"
-  - "工作再忙，也要记得按时下班哦！"
-  - "下班时间到，放松一下吧！"
-  - "一天的工作结束了，回家享受生活吧！"
-  - "下班不积极，钱包不同意——但今天钱包说它想通了！"
-  - "紧急通知：您的工位即将启动自毁程序，倒计时3分钟💣"
-  - "电脑：求求你快关机，我的CPU都要烧出烧烤味了！"
-  - "再不走，老板就要发现你其实早就干完活了😎"
-  - "下班时间到！本AI已自动屏蔽所有工作群消息📵"
-  - "温馨提示：加班不会致富，但可能会致秃👨🦲"
-  - "您的今日KPI：准时下班（已完成）🎯」"
-  - "下班后的你 VS 上班的你：判若两人，建议立刻切换形态！"
-  - "工位结界已解除，请速速回归人类生活区🌍"
-  - "老板的梦想是上市，我的梦想是下班——尊重彼此，从关机开始💻"
-  - "下班时间到，快去追逐你的梦想吧！"
-  - "今天辛苦了！晚风会带走疲惫，月光会照亮回家的路🌙"
-  - "工作只是人生的一站，下一站叫『温柔夜晚』🚌"
-  - "关机键也是重启键，别忘了重启自己的生活✨"
-  - "文件可以明天再写，但晚霞不会等你下班🌇"
-  - "你为世界打工一整天，现在是世界为你点亮星光的时候了🌟"
-  - "把加班焦虑锁进抽屉，钥匙扔进奶茶杯里吧"
-  - "电脑需要散热，你也需要拥抱晚风的清凉🍃"
-  - "今日成就：认真工作，准时奖励自己看日落🌄"
-  - "工作再忙，别忘了你也是某人的星辰与阳光☀️"
-  - "下班不是逃离，是去收集人间烟火气的门票🎫"
+  - "@all"
+holidays: []

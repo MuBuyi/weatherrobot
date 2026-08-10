@@ -5,7 +5,6 @@ import (
 	"wechatrobot/internal/config"
 	"wechatrobot/internal/cronn"
 	"wechatrobot/internal/log"
-	"wechatrobot/internal/wecom"
 
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
@@ -18,29 +17,37 @@ func main() {
 	// 加载配置
 	config.Load()
 
-	// 启动企业微信消息接收服务（在后台运行）
-	go wecom.StartWecomServer("9001")
+	// 按配置创建定时任务
+	location, err := time.LoadLocation(config.Cfg.Timezone)
+	if err != nil {
+		logrus.Fatal("无效时区: ", err)
+	}
+	c := cron.New(cron.WithLocation(location))
 
-	// 创建cron实例（中国时区）
-	c := cron.New(cron.WithLocation(time.FixedZone("CST", 8*3600)))
-
-	// 每天早上 8 点发送天气日报
-	_, err := c.AddFunc("0 8 * * *", cronn.SendDailyReport)
+	// 注册天气日报任务
+	_, err = c.AddFunc(config.Cfg.WeatherCron, cronn.SendDailyReport)
 	if err != nil {
 		logrus.Fatal("创建定时任务失败: ", err)
 	}
-	logrus.Info("天气报告定时任务已添加（每天 8:00 执行一次）")
+	logrus.Infof("天气报告定时任务已添加：%s（%s）", config.Cfg.WeatherCron, config.Cfg.Timezone)
 
-	// 每天下午 6 点提醒下班
-	_, err = c.AddFunc("0 18 * * *", cronn.SendOffWorkReminder)
+	// 注册午餐点餐提醒任务
+	_, err = c.AddFunc(config.Cfg.LunchCron, cronn.SendLunchReminder)
 	if err != nil {
-		logrus.Fatal("创建定时任务失败: ", err)
+		logrus.Fatal("创建午餐提醒定时任务失败: ", err)
 	}
-	logrus.Info("下班提醒定时任务已添加（每天 18:00 执行一次）")
+	logrus.Infof("午餐点餐提醒任务已添加：%s（%s）", config.Cfg.LunchCron, config.Cfg.Timezone)
+
+	// 注册每天 18:00 的固定下班打卡提醒
+	_, err = c.AddFunc(config.Cfg.OffWorkCron, cronn.SendOffWorkReminder)
+	if err != nil {
+		logrus.Fatal("创建下班打卡提醒定时任务失败: ", err)
+	}
+	logrus.Infof("下班打卡提醒任务已添加：%s（%s）", config.Cfg.OffWorkCron, config.Cfg.Timezone)
 
 	// 启动定时任务
 	c.Start()
-	logrus.Info("天气机器人已启动（包含定时任务和微信交互服务）")
+	logrus.Info("天气预报提醒机器人已启动")
 
 	// 保持程序运行
 	select {}

@@ -56,13 +56,6 @@ func main() {
 	}
 	fmt.Println()
 
-	// 检查是否应该发送下班提醒
-	shouldSendOffWork, _, _ := holiday.ShouldSendOffWorkReminder(config.Cfg.Holidays)
-	fmt.Println(sep)
-	fmt.Println("下班提醒判断结果:")
-	fmt.Printf("是否应该发送下班提醒: %v\n", shouldSendOffWork)
-	fmt.Println()
-
 	// 显示配置的假期
 	fmt.Println(sep)
 	fmt.Println("已配置的假期列表:")

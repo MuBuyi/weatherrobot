@@ -191,54 +191,24 @@ func IsFestival(t time.Time) (bool, *Festival) {
 // 返回: (是否发送, 是否为节假日, 节假日信息)
 func ShouldSendReminder(holidays []Holiday) (bool, bool, *Festival) {
 	now := time.Now()
-	
+
 	// 检查是否在假期期间
 	if IsHoliday(now, holidays) {
 		return false, false, nil
 	}
-	
+
 	// 检查是否为节假日
 	isFestival, festival := IsFestival(now)
 	if isFestival {
 		// 节假日: 不发送普通�报告，但发送节假日特色问候
 		return false, true, festival
 	}
-	
+
 	// 检查是否为工作日
 	if IsWorkday(now) {
 		return true, false, nil
 	}
-	
+
 	// 周末不提醒
 	return false, false, nil
-}
-
-// ShouldSendOffWorkReminder 检查是否应该发送下班提醒
-// 返回: (是否发送, 是否为节假日, 节假日信息)
-func ShouldSendOffWorkReminder(holidays []Holiday) (bool, bool, *Festival) {
-	now := time.Now()
-	
-	// 检查是否在假期期间
-	if IsHoliday(now, holidays) {
-		return false, false, nil
-	}
-	
-	// 检查是否为节假日（节假日不发送下班提醒）
-	isFestival, _ := IsFestival(now)
-	if isFestival {
-		return false, false, nil
-	}
-	
-	// 检查是否为工作日
-	if IsWorkday(now) {
-		return true, false, nil
-	}
-	
-	// 周末不提醒
-	return false, false, nil
-}
-
-// parseDate 解析日期字符串
-func parseDate(dateStr string) (time.Time, error) {
-	return time.Parse("2006-01-02", dateStr)
 }

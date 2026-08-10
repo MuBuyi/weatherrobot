@@ -3,149 +3,106 @@ package weather
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"net/url"
+	"strconv"
+	"time"
+
 	"wechatrobot/internal/config"
 	"wechatrobot/internal/log"
 )
 
-type WeatherResponse struct {
-	Code       string `json:"code"`
-	UpdateTime string `json:"updateTime"`
-	FxLink     string `json:"fxLink"`
-	Now        struct {
-		ObsTime   string `json:"obsTime"`
-		Temp      string `json:"temp"`
-		FeelsLike string `json:"feelsLike"`
-		Icon      string `json:"icon"`
-		Text      string `json:"text"`
-		Wind360   string `json:"wind360"`
-		WindDir   string `json:"windDir"`
-		WindScale string `json:"windScale"`
-		WindSpeed string `json:"windSpeed"`
-		Humidity  string `json:"humidity"`
-		Precip    string `json:"precip"`
-		Pressure  string `json:"pressure"`
-		Vis       string `json:"vis"`
-		Cloud     string `json:"cloud"`
-		Dew       string `json:"dew"`
-	} `json:"now"`
-	Daily []struct {
-		FxDate         string `json:"fxDate"`
-		Sunrise        string `json:"sunrise"`
-		Sunset         string `json:"sunset"`
-		Moonrise       string `json:"moonrise"`
-		Moonset        string `json:"moonset"`
-		MoonPhase      string `json:"moonPhase"`
-		MoonPhaseIcon  string `json:"moonPhaseIcon"`
-		TempMax        string `json:"tempMax"`
-		TempMin        string `json:"tempMin"`
-		IconDay        string `json:"iconDay"`
-		TextDay        string `json:"textDay"`
-		IconNight      string `json:"iconNight"`
-		TextNight      string `json:"textNight"`
-		Wind360Day     string `json:"wind360Day"`
-		WindDirDay     string `json:"windDirDay"`
-		WindScaleDay   string `json:"windScaleDay"`
-		WindSpeedDay   string `json:"windSpeedDay"`
-		Wind360Night   string `json:"wind360Night"`
-		WindDirNight   string `json:"windDirNight"`
-		WindScaleNight string `json:"windScaleNight"`
-		WindSpeedNight string `json:"windSpeedNight"`
-		Humidity       string `json:"humidity"`
-		Precip         string `json:"precip"`
-		Pressure       string `json:"pressure"`
-		Vis            string `json:"vis"`
-		Cloud          string `json:"cloud"`
-		UvIndex        string `json:"uvIndex"`
-	} `json:"daily"`
-	Refer struct {
-		Sources []string `json:"sources"`
-		License []string `json:"license"`
-	} `json:"refer"`
-}
-
-type LivingIndicesResponse struct {
-	Daily []struct {
-		Name string `json:"name"`
-		Text string `json:"text"`
+type ForecastResponse struct {
+	Error   bool   `json:"error"`
+	Reason  string `json:"reason"`
+	Current struct {
+		Temperature         float64 `json:"temperature_2m"`
+		ApparentTemperature float64 `json:"apparent_temperature"`
+		Humidity            int     `json:"relative_humidity_2m"`
+		WeatherCode         int     `json:"weather_code"`
+		WindSpeed           float64 `json:"wind_speed_10m"`
+		WindDirection       int     `json:"wind_direction_10m"`
+	} `json:"current"`
+	Daily struct {
+		Time                     []string  `json:"time"`
+		WeatherCode              []int     `json:"weather_code"`
+		TempMax                  []float64 `json:"temperature_2m_max"`
+		TempMin                  []float64 `json:"temperature_2m_min"`
+		PrecipitationProbability []int     `json:"precipitation_probability_max"`
 	} `json:"daily"`
 }
 
-func GetWeather(location, weatherType string) (*WeatherResponse, error) {
+func weatherHTTPClient() *http.Client {
+	return &http.Client{Timeout: time.Duration(config.Cfg.HTTPTimeoutSeconds) * time.Second}
+}
 
-	fmt.Println("开始请求天气接口")
-
-	url := fmt.Sprintf("https://api.qweather.com/v7/weather/now?location=%s&key=%s", location, config.Cfg.WeatherAPIKey)
-
-	if weatherType == "7d" {
-		url = fmt.Sprintf("https://api.qweather.com/v7/weather/7d?location=%s&key=%s", location, config.Cfg.WeatherAPIKey)
-
-	}
-	resp, err := http.Get(url)
+func GetForecast() (*ForecastResponse, error) {
+	endpoint, err := url.Parse(config.Cfg.WeatherBaseURL + "/v1/forecast")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("天气接口地址无效: %w", err)
+	}
+	query := endpoint.Query()
+	query.Set("latitude", strconv.FormatFloat(config.Cfg.Latitude, 'f', 6, 64))
+	query.Set("longitude", strconv.FormatFloat(config.Cfg.Longitude, 'f', 6, 64))
+	query.Set("current", "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m")
+	query.Set("daily", "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max")
+	// Daily data starts with today. Request one extra day so the future forecast excludes today.
+	query.Set("forecast_days", strconv.Itoa(config.Cfg.ForecastDays+1))
+	query.Set("timezone", config.Cfg.Timezone)
+	endpoint.RawQuery = query.Encode()
+
+	resp, err := weatherHTTPClient().Get(endpoint.String())
+	if err != nil {
+		return nil, fmt.Errorf("请求天气接口失败: %w", err)
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
+	var result ForecastResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("解析天气响应失败: %w", err)
 	}
-
-	// 打印 API 响应
-	fmt.Println("===API 响应===: ", string(body))
-
-	var weatherResponse WeatherResponse
-	if err := json.Unmarshal(body, &weatherResponse); err != nil {
-		return nil, err
+	if resp.StatusCode != http.StatusOK || result.Error {
+		return nil, fmt.Errorf("天气接口返回错误: HTTP %d, %s", resp.StatusCode, result.Reason)
 	}
-
-	fmt.Println("天气获取成功")
-
-	return &weatherResponse, nil
+	if len(result.Daily.Time) == 0 {
+		return nil, fmt.Errorf("天气接口未返回预报数据")
+	}
+	return &result, nil
 }
 
-func GetLivingIndices(location string) (*LivingIndicesResponse, error) {
-
-	// https://api.qweather.com/v7/indices/1d?type=1,2&location=101010100
-	url := fmt.Sprintf("https://api.qweather.com/v7/indices/1d?type=1,2&key=%s&location=%s", config.Cfg.WeatherAPIKey, location)
-	fmt.Println("开始请求生活指数接口")
-	fmt.Println("==url===: ", url)
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var indicesResponse LivingIndicesResponse
-	if err := json.Unmarshal(body, &indicesResponse); err != nil {
-		return nil, err
-	}
-	fmt.Println("生活指数获取成功")
-	fmt.Println("===indicesResponse===: ", indicesResponse)
-	return &indicesResponse, nil
-}
-
-func GetCityName(location string) string {
-	// 这里可以根据 location 返回对应的城市名称
-	// 例如：101020100 -> 上海
-	switch location {
-	case "101200101":
-		return "武汉"
-	case "101200805":
-		return "监利"
+func WeatherDescription(code int) string {
+	switch {
+	case code == 0:
+		return "晴"
+	case code == 1:
+		return "大部晴朗"
+	case code == 2:
+		return "多云"
+	case code == 3:
+		return "阴"
+	case code == 45 || code == 48:
+		return "雾"
+	case code >= 51 && code <= 57:
+		return "毛毛雨"
+	case code >= 61 && code <= 67:
+		return "雨"
+	case code >= 71 && code <= 77:
+		return "雪"
+	case code >= 80 && code <= 82:
+		return "阵雨"
+	case code == 85 || code == 86:
+		return "阵雪"
+	case code >= 95:
+		return "雷暴"
 	default:
-		return "未知城市"
+		return "未知天气"
 	}
 }
 
-func SendErrorAlert(err error) {
-	// 这里可以实现发送错误警报的逻辑，例如通过企业微信发送
-	log.Error("错误警报: ", err)
+func WindDirection(degrees int) string {
+	directions := []string{"北风", "东北风", "东风", "东南风", "南风", "西南风", "西风", "西北风"}
+	index := ((degrees + 22) % 360) / 45
+	return directions[index]
 }
+
+func SendErrorAlert(err error) { log.Error("错误警报: ", err) }
